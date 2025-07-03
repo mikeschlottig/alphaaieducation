@@ -1,0 +1,435 @@
+import React, { useState, useEffect } from 'react';
+
+const DeploymentDashboard = () => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState([]);
+  const [expandedSection, setExpandedSection] = useState(null);
+
+  const steps = [
+    {
+      id: 'artifact',
+      title: 'Claude Artifact Ready',
+      icon: '🤖',
+      description: 'Your CMS Builder is working perfectly in Claude',
+      duration: '✅ Complete',
+      color: 'bg-purple-500',
+      details: {
+        overview: 'You have a functional React application running in Claude artifacts',
+        checklist: [
+          'Code is error-free and functional',
+          'All features tested and working',
+          'Ready for extraction and deployment'
+        ],
+        nextAction: 'Extract the code and prepare for GitHub'
+      }
+    },
+    {
+      id: 'github-setup',
+      title: 'GitHub Repository Setup',
+      icon: '🐙',
+      description: 'Create repository and push your code',
+      duration: '~5 minutes',
+      color: 'bg-gray-800',
+      details: {
+        overview: 'Set up a new GitHub repository for your project',
+        commands: [
+          'git init',
+          'git add .',
+          'git commit -m "Initial commit: CMS Builder"',
+          'git branch -M main',
+          'git remote add origin https://github.com/username/leverage-ai-cms.git',
+          'git push -u origin main'
+        ],
+        checklist: [
+          'Create new repository on GitHub',
+          'Copy artifact code to local project',
+          'Add package.json with dependencies',
+          'Push code to GitHub'
+        ]
+      }
+    },
+    {
+      id: 'cloudflare-account',
+      title: 'Cloudflare Account Setup',
+      icon: '☁️',
+      description: 'Configure Cloudflare account and domain',
+      duration: '~10 minutes',
+      color: 'bg-orange-500',
+      details: {
+        overview: 'Set up your Cloudflare account and configure DNS',
+        checklist: [
+          'Create/login to Cloudflare account',
+          'Add your domain to Cloudflare',
+          'Update nameservers at domain registrar',
+          'Verify DNS is active (may take 24-48 hours)'
+        ],
+        tips: [
+          'You can use a free .dev domain from Google Domains',
+          'Cloudflare offers free DNS and CDN services',
+          'DNS propagation can take time - be patient!'
+        ]
+      }
+    },
+    {
+      id: 'workers-backend',
+      title: 'Deploy Workers Backend',
+      icon: '⚡',
+      description: 'Deploy your API backend to Cloudflare Workers',
+      duration: '~15 minutes',
+      color: 'bg-yellow-500',
+      details: {
+        overview: 'Create and deploy your backend API using Cloudflare Workers',
+        commands: [
+          'npm create cloudflare@latest leverage-ai-cms-api',
+          'cd leverage-ai-cms-api',
+          'npm install hono',
+          'wrangler login',
+          'wrangler d1 create cms-database',
+          'wrangler deploy'
+        ],
+        checklist: [
+          'Install Wrangler CLI',
+          'Create new Workers project',
+          'Copy backend code from artifacts',
+          'Configure D1 database',
+          'Deploy to Workers'
+        ]
+      }
+    },
+    {
+      id: 'frontend-deploy',
+      title: 'Deploy Frontend Application',
+      icon: '🎨',
+      description: 'Deploy React frontend to Cloudflare Pages',
+      duration: '~10 minutes',
+      color: 'bg-blue-500',
+      details: {
+        overview: 'Deploy your React frontend using Cloudflare Pages',
+        commands: [
+          'cd your-frontend-project',
+          'npm install',
+          'npm run build',
+          'wrangler pages deploy dist'
+        ],
+        checklist: [
+          'Update API_BASE_URL to Workers endpoint',
+          'Build production version',
+          'Deploy to Cloudflare Pages',
+          'Configure custom domain'
+        ]
+      }
+    },
+    {
+      id: 'dns-config',
+      title: 'DNS Configuration',
+      icon: '🌐',
+      description: 'Configure DNS records and custom domains',
+      duration: '~5 minutes',
+      color: 'bg-green-500',
+      details: {
+        overview: 'Set up DNS records to point to your deployments',
+        checklist: [
+          'Add CNAME record for frontend (www.yourdomain.com)',
+          'Add CNAME record for API (api.yourdomain.com)',
+          'Configure SSL certificates (automatic)',
+          'Test all endpoints'
+        ],
+        records: [
+          { type: 'CNAME', name: 'www', value: 'your-pages.pages.dev' },
+          { type: 'CNAME', name: 'api', value: 'your-worker.your-subdomain.workers.dev' }
+        ]
+      }
+    },
+    {
+      id: 'testing',
+      title: 'Testing & Verification',
+      icon: '✅',
+      description: 'Test your live application end-to-end',
+      duration: '~10 minutes',
+      color: 'bg-indigo-500',
+      details: {
+        overview: 'Verify everything is working correctly in production',
+        checklist: [
+          'Frontend loads without errors',
+          'API endpoints respond correctly',
+          'Database operations work',
+          'SSL certificates are active',
+          'All features functional'
+        ],
+        testUrls: [
+          'https://www.yourdomain.com',
+          'https://api.yourdomain.com/health',
+          'https://api.yourdomain.com/api/projects'
+        ]
+      }
+    }
+  ];
+
+  const toggleComplete = (stepIndex) => {
+    if (completedSteps.includes(stepIndex)) {
+      setCompletedSteps(completedSteps.filter(i => i !== stepIndex));
+    } else {
+      setCompletedSteps([...completedSteps, stepIndex]);
+    }
+  };
+
+  const getStepStatus = (index) => {
+    if (completedSteps.includes(index)) return 'completed';
+    if (index === currentStep) return 'current';
+    if (index < currentStep) return 'available';
+    return 'locked';
+  };
+
+  const CodeBlock = ({ commands, title }) => (
+    <div className="bg-gray-900 rounded-lg p-4 my-4">
+      <div className="text-green-400 text-sm font-mono mb-2"># {title}</div>
+      {commands.map((cmd, idx) => (
+        <div key={idx} className="text-gray-300 font-mono text-sm mb-1">
+          <span className="text-blue-400">$</span> {cmd}
+        </div>
+      ))}
+    </div>
+  );
+
+  const StepCard = ({ step, index, status, onToggleComplete, onExpand, isExpanded }) => (
+    <div className={`border-2 rounded-xl p-6 transition-all duration-300 ${
+      status === 'completed' ? 'border-green-500 bg-green-50' :
+      status === 'current' ? 'border-blue-500 bg-blue-50' :
+      status === 'available' ? 'border-gray-300 bg-white' :
+      'border-gray-200 bg-gray-50 opacity-60'
+    }`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
+            status === 'completed' ? 'bg-green-500' :
+            status === 'current' ? 'bg-blue-500' :
+            step.color
+          } text-white`}>
+            {status === 'completed' ? '✓' : step.icon}
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-800">{step.title}</h3>
+            <p className="text-gray-600">{step.description}</p>
+            <span className="text-sm text-gray-500">{step.duration}</span>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => onToggleComplete(index)}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              status === 'completed' 
+                ? 'bg-green-500 text-white' 
+                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+            }`}
+          >
+            {status === 'completed' ? 'Completed' : 'Mark Done'}
+          </button>
+          <button
+            onClick={() => onExpand(isExpanded ? null : index)}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            {isExpanded ? 'Hide Details' : 'Show Details'}
+          </button>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="border-t pt-4 space-y-4">
+          <div>
+            <h4 className="font-bold text-lg mb-2">Overview</h4>
+            <p className="text-gray-700">{step.details.overview}</p>
+          </div>
+
+          {step.details.commands && (
+            <CodeBlock commands={step.details.commands} title="Commands to run" />
+          )}
+
+          {step.details.checklist && (
+            <div>
+              <h4 className="font-bold text-lg mb-2">Checklist</h4>
+              <ul className="space-y-2">
+                {step.details.checklist.map((item, idx) => (
+                  <li key={idx} className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded"></div>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {step.details.records && (
+            <div>
+              <h4 className="font-bold text-lg mb-2">DNS Records</h4>
+              <div className="bg-gray-100 rounded-lg p-4">
+                {step.details.records.map((record, idx) => (
+                  <div key={idx} className="font-mono text-sm mb-2">
+                    <span className="text-blue-600">{record.type}</span> | 
+                    <span className="text-green-600 mx-2">{record.name}</span> → 
+                    <span className="text-purple-600 ml-2">{record.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step.details.tips && (
+            <div>
+              <h4 className="font-bold text-lg mb-2">💡 Pro Tips</h4>
+              <ul className="space-y-1 text-sm text-gray-600">
+                {step.details.tips.map((tip, idx) => (
+                  <li key={idx}>• {tip}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {step.details.testUrls && (
+            <div>
+              <h4 className="font-bold text-lg mb-2">Test URLs</h4>
+              <ul className="space-y-1">
+                {step.details.testUrls.map((url, idx) => (
+                  <li key={idx} className="font-mono text-sm text-blue-600">{url}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const ProgressBar = () => (
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold">Deployment Progress</h2>
+        <span className="text-lg font-semibold text-gray-600">
+          {completedSteps.length} / {steps.length} Complete
+        </span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-3">
+        <div 
+          className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
+          style={{ width: `${(completedSteps.length / steps.length) * 100}%` }}
+        />
+      </div>
+    </div>
+  );
+
+  const QuickStart = () => (
+    <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-6 text-white mb-8">
+      <h2 className="text-2xl font-bold mb-4">🚀 Quick Start Guide</h2>
+      <div className="grid md:grid-cols-3 gap-4 text-sm">
+        <div>
+          <h3 className="font-bold mb-2">🎯 What You'll Build</h3>
+          <ul className="space-y-1 opacity-90">
+            <li>• Live CMS Builder at your domain</li>
+            <li>• Scalable backend API</li>
+            <li>• Global CDN distribution</li>
+            <li>• Production-ready database</li>
+          </ul>
+        </div>
+        <div>
+          <h3 className="font-bold mb-2">⏱️ Total Time</h3>
+          <ul className="space-y-1 opacity-90">
+            <li>• Setup: ~30 minutes</li>
+            <li>• DNS Propagation: 0-48 hours</li>
+            <li>• Testing: ~10 minutes</li>
+            <li>• <strong>Total Active Work: ~45 min</strong></li>
+          </ul>
+        </div>
+        <div>
+          <h3 className="font-bold mb-2">🛠️ Prerequisites</h3>
+          <ul className="space-y-1 opacity-90">
+            <li>• GitHub account</li>
+            <li>• Cloudflare account (free)</li>
+            <li>• Domain name (optional)</li>
+            <li>• Node.js installed</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+
+  const StatusOverview = () => (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      {['Not Started', 'In Progress', 'Completed', 'Available'].map((status, idx) => {
+        const counts = [
+          steps.length - completedSteps.length - (currentStep < steps.length ? 1 : 0),
+          currentStep < steps.length && !completedSteps.includes(currentStep) ? 1 : 0,
+          completedSteps.length,
+          Math.min(currentStep + 1, steps.length) - completedSteps.length
+        ];
+        const colors = ['bg-gray-300', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500'];
+        
+        return (
+          <div key={status} className={`${colors[idx]} text-white rounded-lg p-4 text-center`}>
+            <div className="text-2xl font-bold">{counts[idx]}</div>
+            <div className="text-sm opacity-90">{status}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            🚀 Claude to Cloudflare Deployment
+          </h1>
+          <p className="text-xl text-gray-600">
+            Complete visual guide: From artifact to production in 7 steps
+          </p>
+        </div>
+
+        <QuickStart />
+        <StatusOverview />
+        <ProgressBar />
+
+        {/* Steps */}
+        <div className="space-y-6">
+          {steps.map((step, index) => (
+            <StepCard
+              key={step.id}
+              step={step}
+              index={index}
+              status={getStepStatus(index)}
+              onToggleComplete={toggleComplete}
+              onExpand={setExpandedSection}
+              isExpanded={expandedSection === index}
+            />
+          ))}
+        </div>
+
+        {/* Success Message */}
+        {completedSteps.length === steps.length && (
+          <div className="mt-8 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-xl p-8 text-center">
+            <div className="text-6xl mb-4">🎉</div>
+            <h2 className="text-3xl font-bold mb-4">Congratulations!</h2>
+            <p className="text-xl mb-4">
+              Your LEVERAGE AI CMS is now live and ready for the world!
+            </p>
+            <div className="flex justify-center gap-4">
+              <button className="bg-white text-green-600 px-6 py-3 rounded-lg font-bold hover:bg-gray-100 transition-colors">
+                🌐 Visit Your Site
+              </button>
+              <button className="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 transition-colors">
+                📊 View Analytics
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="mt-12 text-center text-gray-500">
+          <p>Built with ❤️ for LEVERAGE AI • Powered by Cloudflare Edge Network</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DeploymentDashboard;
