@@ -1,0 +1,374 @@
+import React, { useState } from 'react';
+import { ChevronDown, ChevronRight, Building2, MapPin, Users, Plus, Edit2, Trash2 } from 'lucide-react';
+
+const OregonBusinessHierarchy = () => {
+  const [expandedNodes, setExpandedNodes] = useState({});
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingNode, setEditingNode] = useState(null);
+
+  const initialData = {
+    id: 'oregon-root',
+    name: 'Oregon SMB Directory',
+    type: 'root',
+    children: [
+      {
+        id: 'portland',
+        name: 'Portland',
+        type: 'city',
+        businessCount: 245,
+        children: [
+          { id: 'portland-healthcare', name: 'Healthcare', type: 'industry', businessCount: 45, children: [] },
+          { id: 'portland-home-services', name: 'Home Services', type: 'industry', businessCount: 38, children: [] },
+          { id: 'portland-legal', name: 'Legal', type: 'industry', businessCount: 29, children: [] },
+          { id: 'portland-automotive', name: 'Automotive', type: 'industry', businessCount: 22, children: [] },
+          { id: 'portland-food', name: 'Food & Dining', type: 'industry', businessCount: 67, children: [] },
+          { id: 'portland-beauty', name: 'Beauty & Wellness', type: 'industry', businessCount: 19, children: [] },
+          { id: 'portland-retail', name: 'Retail & Shopping', type: 'industry', businessCount: 15, children: [] },
+          { id: 'portland-professional', name: 'Professional Services', type: 'industry', businessCount: 10, children: [] }
+        ]
+      },
+      {
+        id: 'salem',
+        name: 'Salem',
+        type: 'city',
+        businessCount: 128,
+        children: [
+          { id: 'salem-healthcare', name: 'Healthcare', type: 'industry', businessCount: 25, children: [] },
+          { id: 'salem-home-services', name: 'Home Services', type: 'industry', businessCount: 22, children: [] },
+          { id: 'salem-legal', name: 'Legal', type: 'industry', businessCount: 18, children: [] },
+          { id: 'salem-automotive', name: 'Automotive', type: 'industry', businessCount: 15, children: [] },
+          { id: 'salem-food', name: 'Food & Dining', type: 'industry', businessCount: 32, children: [] },
+          { id: 'salem-beauty', name: 'Beauty & Wellness', type: 'industry', businessCount: 8, children: [] },
+          { id: 'salem-retail', name: 'Retail & Shopping', type: 'industry', businessCount: 5, children: [] },
+          { id: 'salem-professional', name: 'Professional Services', type: 'industry', businessCount: 3, children: [] }
+        ]
+      },
+      {
+        id: 'eugene',
+        name: 'Eugene',
+        type: 'city',
+        businessCount: 95,
+        children: [
+          { id: 'eugene-healthcare', name: 'Healthcare', type: 'industry', businessCount: 18, children: [] },
+          { id: 'eugene-home-services', name: 'Home Services', type: 'industry', businessCount: 16, children: [] },
+          { id: 'eugene-legal', name: 'Legal', type: 'industry', businessCount: 12, children: [] },
+          { id: 'eugene-automotive', name: 'Automotive', type: 'industry', businessCount: 10, children: [] },
+          { id: 'eugene-food', name: 'Food & Dining', type: 'industry', businessCount: 25, children: [] },
+          { id: 'eugene-beauty', name: 'Beauty & Wellness', type: 'industry', businessCount: 8, children: [] },
+          { id: 'eugene-retail', name: 'Retail & Shopping', type: 'industry', businessCount: 4, children: [] },
+          { id: 'eugene-professional', name: 'Professional Services', type: 'industry', businessCount: 2, children: [] }
+        ]
+      }
+    ]
+  };
+
+  const [hierarchyData, setHierarchyData] = useState(initialData);
+
+  const toggleExpanded = (nodeId) => {
+    setExpandedNodes(prev => ({
+      ...prev,
+      [nodeId]: !prev[nodeId]
+    }));
+  };
+
+  const selectNode = (node) => {
+    setSelectedNode(node);
+    setShowAddForm(false);
+    setEditingNode(null);
+  };
+
+  const getNodeIcon = (type) => {
+    switch (type) {
+      case 'root': return <Building2 className="w-5 h-5 text-blue-600" />;
+      case 'city': return <MapPin className="w-5 h-5 text-green-600" />;
+      case 'industry': return <Users className="w-5 h-5 text-purple-600" />;
+      default: return <Building2 className="w-5 h-5 text-gray-600" />;
+    }
+  };
+
+  const getNodeColor = (type) => {
+    switch (type) {
+      case 'root': return 'bg-blue-50 border-blue-200 text-blue-800';
+      case 'city': return 'bg-green-50 border-green-200 text-green-800';
+      case 'industry': return 'bg-purple-50 border-purple-200 text-purple-800';
+      default: return 'bg-gray-50 border-gray-200 text-gray-800';
+    }
+  };
+
+  const addNewNode = (parentId, newNodeData) => {
+    const addNodeRecursive = (node) => {
+      if (node.id === parentId) {
+        const newNode = {
+          id: `${parentId}-${Date.now()}`,
+          name: newNodeData.name,
+          type: newNodeData.type,
+          businessCount: newNodeData.businessCount || 0,
+          children: []
+        };
+        return { ...node, children: [...node.children, newNode] };
+      }
+      if (node.children) {
+        return { ...node, children: node.children.map(addNodeRecursive) };
+      }
+      return node;
+    };
+
+    setHierarchyData(addNodeRecursive(hierarchyData));
+    setShowAddForm(false);
+  };
+
+  const deleteNode = (nodeId) => {
+    const deleteNodeRecursive = (node) => {
+      if (node.children) {
+        return { ...node, children: node.children.filter(child => child.id !== nodeId).map(deleteNodeRecursive) };
+      }
+      return node;
+    };
+
+    setHierarchyData(deleteNodeRecursive(hierarchyData));
+    setSelectedNode(null);
+  };
+
+  const TreeNode = ({ node, level = 0 }) => {
+    const hasChildren = node.children && node.children.length > 0;
+    const isExpanded = expandedNodes[node.id];
+    const isSelected = selectedNode?.id === node.id;
+
+    return (
+      <div className="select-none">
+        <div
+          className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+            isSelected ? 'ring-2 ring-blue-500 ' + getNodeColor(node.type) : getNodeColor(node.type)
+          }`}
+          style={{ marginLeft: `${level * 20}px` }}
+          onClick={() => selectNode(node)}
+        >
+          {hasChildren && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpanded(node.id);
+              }}
+              className="p-1 hover:bg-white/50 rounded"
+            >
+              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+          )}
+          {!hasChildren && <div className="w-6" />}
+          {getNodeIcon(node.type)}
+          <span className="font-medium">{node.name}</span>
+          {node.businessCount !== undefined && (
+            <span className="ml-auto text-sm bg-white/70 px-2 py-1 rounded-full">
+              {node.businessCount} businesses
+            </span>
+          )}
+        </div>
+        {hasChildren && isExpanded && (
+          <div className="mt-2 space-y-1">
+            {node.children.map((child) => (
+              <TreeNode key={child.id} node={child} level={level + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const AddNodeForm = ({ parentNode, onAdd, onCancel }) => {
+    const [formData, setFormData] = useState({
+      name: '',
+      type: parentNode.type === 'root' ? 'city' : 'industry',
+      businessCount: 0
+    });
+
+    const handleSubmit = () => {
+      if (formData.name.trim()) {
+        onAdd(parentNode.id, formData);
+        setFormData({ name: '', type: parentNode.type === 'root' ? 'city' : 'industry', businessCount: 0 });
+      }
+    };
+
+    return (
+      <div className="bg-white p-6 rounded-lg border-2 border-dashed border-gray-300">
+        <h3 className="text-lg font-semibold mb-4">Add New {formData.type}</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Name</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder={`Enter ${formData.type} name`}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Business Count</label>
+            <input
+              type="number"
+              value={formData.businessCount}
+              onChange={(e) => setFormData(prev => ({ ...prev, businessCount: parseInt(e.target.value) || 0 }))}
+              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              min="0"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSubmit}
+              className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Add {formData.type}
+            </button>
+            <button
+              onClick={onCancel}
+              className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const getTotalBusinesses = (node) => {
+    if (!node.children || node.children.length === 0) {
+      return node.businessCount || 0;
+    }
+    return node.children.reduce((total, child) => total + getTotalBusinesses(child), 0);
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Oregon Business Hierarchy Dashboard</h1>
+        <p className="text-gray-600">Organize and manage your business directory across Oregon's markets</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Hierarchy Tree */}
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Market Hierarchy</h2>
+            <div className="text-sm text-gray-500">
+              Total: {getTotalBusinesses(hierarchyData)} businesses
+            </div>
+          </div>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            <TreeNode node={hierarchyData} />
+          </div>
+        </div>
+
+        {/* Details Panel */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Node Details</h2>
+          
+          {selectedNode ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                {getNodeIcon(selectedNode.type)}
+                <div>
+                  <h3 className="font-semibold text-lg">{selectedNode.name}</h3>
+                  <p className="text-sm text-gray-500 capitalize">{selectedNode.type}</p>
+                </div>
+              </div>
+              
+              {selectedNode.businessCount !== undefined && (
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <div className="text-sm text-gray-600">Business Count</div>
+                  <div className="text-2xl font-bold text-gray-900">{selectedNode.businessCount}</div>
+                </div>
+              )}
+
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-sm text-gray-600">Total Businesses</div>
+                <div className="text-2xl font-bold text-gray-900">{getTotalBusinesses(selectedNode)}</div>
+              </div>
+
+              {selectedNode.children && (
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <div className="text-sm text-gray-600">Sub-categories</div>
+                  <div className="text-2xl font-bold text-gray-900">{selectedNode.children.length}</div>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                {selectedNode.type !== 'industry' && (
+                  <button
+                    onClick={() => setShowAddForm(true)}
+                    className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Child
+                  </button>
+                )}
+                {selectedNode.type !== 'root' && (
+                  <button
+                    onClick={() => deleteNode(selectedNode.id)}
+                    className="flex-1 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Building2 className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p>Select a node to view details</p>
+            </div>
+          )}
+
+          {showAddForm && selectedNode && (
+            <div className="mt-6 pt-6 border-t">
+              <AddNodeForm
+                parentNode={selectedNode}
+                onAdd={addNewNode}
+                onCancel={() => setShowAddForm(false)}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Cities</p>
+              <p className="text-2xl font-bold text-green-600">{hierarchyData.children.length}</p>
+            </div>
+            <MapPin className="w-8 h-8 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Industries</p>
+              <p className="text-2xl font-bold text-purple-600">
+                {hierarchyData.children.reduce((total, city) => total + city.children.length, 0)}
+              </p>
+            </div>
+            <Users className="w-8 h-8 text-purple-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Businesses</p>
+              <p className="text-2xl font-bold text-blue-600">{getTotalBusinesses(hierarchyData)}</p>
+            </div>
+            <Building2 className="w-8 h-8 text-blue-600" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default OregonBusinessHierarchy;
