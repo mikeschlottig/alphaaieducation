@@ -1,0 +1,436 @@
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, Circle, AlertCircle, Download, Settings, Play, Code, FileText, Monitor, Cpu, HardDrive, Zap } from 'lucide-react';
+
+const BlenderClaudeIntegrationDashboard = () => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState(new Set());
+  const [showConfig, setShowConfig] = useState(false);
+  const [systemInfo, setSystemInfo] = useState({
+    os: 'Windows',
+    python: 'Not Detected',
+    blender: 'Not Detected',
+    uv: 'Not Detected'
+  });
+
+  const steps = [
+    {
+      id: 'prerequisites',
+      title: 'System Prerequisites',
+      description: 'Verify system requirements and install dependencies',
+      icon: <Cpu className="w-5 h-5" />,
+      color: 'bg-blue-500'
+    },
+    {
+      id: 'uv-install',
+      title: 'Install UV Package Manager',
+      description: 'Install UV for MCP server management',
+      icon: <Download className="w-5 h-5" />,
+      color: 'bg-green-500'
+    },
+    {
+      id: 'blender-setup',
+      title: 'Setup Blender 4.4',
+      description: 'Install and configure Blender with MCP addon',
+      icon: <Settings className="w-5 h-5" />,
+      color: 'bg-purple-500'
+    },
+    {
+      id: 'claude-config',
+      title: 'Configure Claude Desktop',
+      description: 'Setup MCP server configuration',
+      icon: <FileText className="w-5 h-5" />,
+      color: 'bg-orange-500'
+    },
+    {
+      id: 'connection',
+      title: 'Establish Connection',
+      description: 'Start MCP server and connect systems',
+      icon: <Zap className="w-5 h-5" />,
+      color: 'bg-red-500'
+    },
+    {
+      id: 'testing',
+      title: 'Test Integration',
+      description: 'Verify functionality with sample commands',
+      icon: <Play className="w-5 h-5" />,
+      color: 'bg-indigo-500'
+    }
+  ];
+
+  const markStepComplete = (stepIndex) => {
+    setCompletedSteps(prev => new Set([...prev, stepIndex]));
+  };
+
+  const ArchitectureDiagram = () => (
+    <div className="bg-gray-50 p-6 rounded-lg mb-6">
+      <h3 className="text-lg font-semibold mb-4">Integration Architecture</h3>
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col items-center">
+          <div className="w-16 h-16 bg-blue-500 rounded-lg flex items-center justify-center mb-2">
+            <Monitor className="w-8 h-8 text-white" />
+          </div>
+          <span className="text-sm font-medium">Claude 4</span>
+          <span className="text-xs text-gray-500">Desktop App</span>
+        </div>
+        
+        <div className="flex flex-col items-center">
+          <div className="w-4 h-4 bg-gray-400 rounded-full mb-2"></div>
+          <div className="w-8 h-0.5 bg-gray-400 mb-2"></div>
+          <span className="text-xs text-gray-500">MCP Protocol</span>
+        </div>
+        
+        <div className="flex flex-col items-center">
+          <div className="w-16 h-16 bg-green-500 rounded-lg flex items-center justify-center mb-2">
+            <HardDrive className="w-8 h-8 text-white" />
+          </div>
+          <span className="text-sm font-medium">MCP Server</span>
+          <span className="text-xs text-gray-500">UV Package</span>
+        </div>
+        
+        <div className="flex flex-col items-center">
+          <div className="w-4 h-4 bg-gray-400 rounded-full mb-2"></div>
+          <div className="w-8 h-0.5 bg-gray-400 mb-2"></div>
+          <span className="text-xs text-gray-500">Socket Connection</span>
+        </div>
+        
+        <div className="flex flex-col items-center">
+          <div className="w-16 h-16 bg-orange-500 rounded-lg flex items-center justify-center mb-2">
+            <Code className="w-8 h-8 text-white" />
+          </div>
+          <span className="text-sm font-medium">Blender 4.4</span>
+          <span className="text-xs text-gray-500">MCP Addon</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const SystemCheck = () => (
+    <div className="bg-white p-6 rounded-lg border mb-6">
+      <h3 className="text-lg font-semibold mb-4">System Status</h3>
+      <div className="space-y-3">
+        {Object.entries(systemInfo).map(([key, value]) => (
+          <div key={key} className="flex items-center justify-between">
+            <span className="capitalize font-medium">{key}</span>
+            <span className={`px-2 py-1 rounded text-sm ${
+              value.includes('Not') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+            }`}>
+              {value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const ConfigurationPanel = () => (
+    <div className="bg-white p-6 rounded-lg border">
+      <h3 className="text-lg font-semibold mb-4">Claude Desktop Configuration</h3>
+      <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm">
+        <pre>{`{
+  "mcpServers": {
+    "blender": {
+      "command": "uvx",
+      "args": ["blender-mcp"]
+    }
+  }
+}`}</pre>
+      </div>
+      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+        <div className="flex items-center">
+          <AlertCircle className="w-4 h-4 text-yellow-600 mr-2" />
+          <span className="text-sm text-yellow-800">
+            Save this configuration to: %APPDATA%\Anthropic Claude\config\claude_desktop_config.json
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const StepContent = ({ step }) => {
+    switch (step.id) {
+      case 'prerequisites':
+        return (
+          <div className="space-y-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-semibold text-blue-900 mb-2">System Requirements</h4>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• Windows 8.1+ (64-bit), macOS 11.2+, or Linux glibc 2.28+</li>
+                <li>• 4-core processor with SSE4.2 support (8-core recommended)</li>
+                <li>• 8GB RAM minimum (32GB recommended)</li>
+                <li>• Graphics card with 2GB VRAM (8GB recommended)</li>
+                <li>• Python 3.10 or newer</li>
+                <li>• SSD storage recommended</li>
+              </ul>
+            </div>
+            <SystemCheck />
+          </div>
+        );
+      
+      case 'uv-install':
+        return (
+          <div className="space-y-4">
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h4 className="font-semibold text-green-900 mb-2">Install UV Package Manager</h4>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-green-800 mb-2">Windows (PowerShell):</p>
+                  <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm">
+                    powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-green-800 mb-2">macOS (Homebrew):</p>
+                  <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm">
+                    brew install uv
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-green-800 mb-2">Linux:</p>
+                  <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm">
+                    curl -LsSf https://astral.sh/uv/install.sh | sh
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 className="font-semibold text-yellow-900 mb-2">Verify Installation</h4>
+              <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm">
+                uv --version
+              </div>
+            </div>
+          </div>
+        );
+      
+      case 'blender-setup':
+        return (
+          <div className="space-y-4">
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <h4 className="font-semibold text-purple-900 mb-2">Blender 4.4 Setup</h4>
+              <ol className="text-sm text-purple-800 space-y-2">
+                <li>1. Download Blender 4.4 from official website</li>
+                <li>2. Install Blender with default settings</li>
+                <li>3. Download MCP addon from GitHub repository</li>
+                <li>4. Go to Edit → Preferences → Add-ons → Install</li>
+                <li>5. Select downloaded addon.py file</li>
+                <li>6. Enable "Interface: Blender MCP" checkbox</li>
+                <li>7. Restart Blender to complete installation</li>
+              </ol>
+            </div>
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <div className="flex items-center">
+                <AlertCircle className="w-4 h-4 text-red-600 mr-2" />
+                <span className="text-sm text-red-800 font-medium">
+                  Important: If upgrading, uninstall previous version first
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      
+      case 'claude-config':
+        return (
+          <div className="space-y-4">
+            <ConfigurationPanel />
+            <div className="bg-orange-50 p-4 rounded-lg">
+              <h4 className="font-semibold text-orange-900 mb-2">Configuration Steps</h4>
+              <ol className="text-sm text-orange-800 space-y-2">
+                <li>1. Open Claude Desktop application</li>
+                <li>2. Go to Settings → Developer → Edit Config</li>
+                <li>3. Add the MCP server configuration above</li>
+                <li>4. Save the configuration file</li>
+                <li>5. Completely restart Claude Desktop</li>
+              </ol>
+            </div>
+          </div>
+        );
+      
+      case 'connection':
+        return (
+          <div className="space-y-4">
+            <div className="bg-red-50 p-4 rounded-lg">
+              <h4 className="font-semibold text-red-900 mb-2">Establish Connection</h4>
+              <ol className="text-sm text-red-800 space-y-2">
+                <li>1. Launch Claude Desktop first</li>
+                <li>2. Open Blender 4.4</li>
+                <li>3. Press 'N' to open 3D View sidebar</li>
+                <li>4. Find "BlenderMCP" tab</li>
+                <li>5. Click "Connect to Claude"</li>
+                <li>6. Verify hammer icon appears in Claude Desktop</li>
+              </ol>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <div className="flex items-center">
+                <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                <span className="text-sm text-green-800 font-medium">
+                  Connection successful when hammer icon appears in Claude Desktop
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      
+      case 'testing':
+        return (
+          <div className="space-y-4">
+            <div className="bg-indigo-50 p-4 rounded-lg">
+              <h4 className="font-semibold text-indigo-900 mb-2">Test Commands</h4>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-indigo-800 mb-1">Basic object creation:</p>
+                  <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm">
+                    "Create a red metallic sphere"
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-indigo-800 mb-1">Scene generation:</p>
+                  <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm">
+                    "Create a low poly dungeon scene with a dragon"
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-indigo-800 mb-1">Material application:</p>
+                  <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm">
+                    "Apply a weathered stone texture to the cube"
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      
+      default:
+        return <div>Step content not found</div>;
+    }
+  };
+
+  const TroubleshootingPanel = () => (
+    <div className="bg-white p-6 rounded-lg border">
+      <h3 className="text-lg font-semibold mb-4">Common Issues & Solutions</h3>
+      <div className="space-y-4">
+        <div className="border-l-4 border-red-500 pl-4">
+          <h4 className="font-semibold text-red-900">Connection Failed</h4>
+          <p className="text-sm text-red-800">Ensure UV is properly installed and accessible from command line</p>
+        </div>
+        <div className="border-l-4 border-yellow-500 pl-4">
+          <h4 className="font-semibold text-yellow-900">Multiple Server Instances</h4>
+          <p className="text-sm text-yellow-800">Only run one MCP server instance at a time</p>
+        </div>
+        <div className="border-l-4 border-blue-500 pl-4">
+          <h4 className="font-semibold text-blue-900">Firewall Blocking</h4>
+          <p className="text-sm text-blue-800">Check firewall settings and allow local socket connections</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="max-w-6xl mx-auto p-6 bg-gray-100 min-h-screen">
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Claude-Blender Integration Dashboard
+        </h1>
+        <p className="text-gray-600 mb-4">
+          Complete setup guide for integrating Claude 4 with Blender 4.4 using Model Context Protocol
+        </p>
+        
+        <div className="flex items-center space-x-4 mb-6">
+          <div className="text-sm text-gray-600">
+            Progress: {completedSteps.size} / {steps.length} steps completed
+          </div>
+          <div className="flex-1 bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${(completedSteps.size / steps.length) * 100}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Steps Navigation */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Setup Steps</h2>
+            <div className="space-y-2">
+              {steps.map((step, index) => (
+                <div
+                  key={step.id}
+                  className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                    currentStep === index 
+                      ? 'bg-blue-50 border-2 border-blue-500' 
+                      : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => setCurrentStep(index)}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                    completedSteps.has(index) 
+                      ? 'bg-green-500 text-white' 
+                      : currentStep === index 
+                      ? step.color + ' text-white' 
+                      : 'bg-gray-200'
+                  }`}>
+                    {completedSteps.has(index) ? (
+                      <CheckCircle className="w-4 h-4" />
+                    ) : (
+                      step.icon
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-sm">{step.title}</h3>
+                    <p className="text-xs text-gray-600">{step.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          <ArchitectureDiagram />
+          
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">
+                Step {currentStep + 1}: {steps[currentStep].title}
+              </h2>
+              <button
+                onClick={() => markStepComplete(currentStep)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  completedSteps.has(currentStep)
+                    ? 'bg-green-500 text-white'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                {completedSteps.has(currentStep) ? 'Completed' : 'Mark Complete'}
+              </button>
+            </div>
+            
+            <StepContent step={steps[currentStep]} />
+            
+            <div className="flex justify-between mt-6">
+              <button
+                onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                disabled={currentStep === 0}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
+                disabled={currentStep === steps.length - 1}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+          
+          <TroubleshootingPanel />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default BlenderClaudeIntegrationDashboard;
